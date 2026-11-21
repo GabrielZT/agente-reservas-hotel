@@ -1,5 +1,6 @@
 """Testa dados, modelo, RAG e verificação SEM gastar cota do Gemini:  python testes/testar_sem_api.py
-Genérico: monta os exemplos a partir da 1ª linha do CSV (funciona em regressão e classificação)."""
+Monta os exemplos a partir da 1ª linha do CSV e testa também: erros de domínio do hotel, linguagem natural
+("2 semanas", "julho", "sem" = 0), filtros nas consultas e o conversor de números (com assert)."""
 import sys
 from pathlib import Path
 
@@ -40,6 +41,13 @@ for nome, troca in impossiveis.items():
     erros = F.preparar({**exemplo, **troca})[1]
     print(f"11. Erro de domínio ({nome}):", erros)
     assert erros, f"{nome} deveria virar erro"
+# "sem"/"não" = 0, mas um número dito junto vale mais ("não sei, uns dois" = 2); "semana(s)" não é "sem"
+for texto, esperado in [("sem", 0), ("sem pedidos especiais", 0), ("não fez nenhum", 0), ("não", 0),
+                        ("não sei, uns dois", 2), ("grátis", 0), ("3", 3)]:
+    obtido = F._numero(texto)
+    assert obtido == esperado, f"_numero({texto!r}) = {obtido}, esperado {esperado}"
+assert F._dias("uma semana") == 7 and F._dias("duas semanas") == 14
+print("11b. 'sem'/'não' = 0: ok")
 print("12. Linguagem natural:", F.preparar({**exemplo, "antecedencia_dias": "3 semanas", "mes_chegada": "agosto",
                                              "pedidos_especiais": "dois", "vaga_estacionamento": "não precisa"})[0])
 print("13. Filtros:", {k: v for k, v in F.estatisticas("cancelada", "", [{"coluna": "segmento_mercado", "operador": "==", "valor": "online"},

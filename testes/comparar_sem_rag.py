@@ -1,11 +1,11 @@
 """
 Comparação para o relatório: as MESMAS perguntas respondidas
   (a) pelo Gemini "puro", só com a persona (sem RAG, sem modelo, sem verificação), e
-  (b) pelo agente completo de vocês.
+  (b) pelo nosso agente completo.
 
     python testes/comparar_sem_rag.py            (usa a chave do .env; gasta ~3 chamadas por pergunta)
 
-Troquem as perguntas pelas do dataset de vocês e registrem as diferenças no relatório.
+Perguntas do nosso dataset (hotel); as diferenças vão para a seção "com RAG x sem RAG" do relatório.
 """
 import sys
 from pathlib import Path

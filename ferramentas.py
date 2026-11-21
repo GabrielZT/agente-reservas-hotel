@@ -133,16 +133,20 @@ _EXTENSO = {"zero": 0, "nenhum": 0, "nenhuma": 0, "um": 1, "uma": 1, "dois": 2, 
             "quatro": 4, "cinco": 5, "seis": 6, "sete": 7, "oito": 8, "nove": 9, "dez": 10, "onze": 11,
             "doze": 12, "quinze": 15, "vinte": 20, "trinta": 30, "quarenta": 40, "cinquenta": 50,
             "sessenta": 60, "noventa": 90, "cem": 100}
+# "sem pedidos", "não fez", "grátis" = 0, mas só quando não há outro número ("não sei, uns dois" = 2)
+_NEGACAO = {"sem", "nao", "nem", "gratis", "gratuita", "gratuito"}
 _MILHAR = r"-?[1-9]\d{0,2}(?:\.\d{3})+(?:,\d+)?"
 
 
 def _numero(valor) -> float:
-    """'80', '5.000', '€ 120,50', '2,5', '5 mil', 'duas', 'nenhum' -> float (formato brasileiro)."""
+    """'80', '5.000', '€ 120,50', '2,5', '5 mil', 'duas', 'nenhum', 'sem' -> float (formato brasileiro)."""
     s = str(valor)
     m = re.search(_MILHAR + r"(?![\d.])|-?\d+(?:[.,]\d+)?", s)
     if not m:
         palavras = re.findall(r"[a-z]+", _norm(s))
         achadas = [_EXTENSO[p] for p in palavras if p in _EXTENSO]
+        if not achadas and _NEGACAO & set(palavras):
+            achadas = [0]
         if not achadas:
             raise ValueError(valor)
         x = float(achadas[0])
@@ -247,6 +251,22 @@ def preparar(entrada: dict) -> tuple[dict, list[str], list[str]]:
 
 
 # ---------------------------------------------------------------- modelo
+def metricas_explicadas() -> dict:
+    """Métricas de teste + as mesmas em linguagem de leigo, JÁ CALCULADAS (o Gemini não faz contas;
+    se fizer, a verificação recusa o número)."""
+    m = {k: v for k, v in METRICAS.items() if k not in ("sklearn_version", "atributos_do_modelo")}
+    percebe = round(100 * METRICAS["recall_teste"])
+    m.update({
+        "acuracia_percentual": round(100 * METRICAS["acuracia_teste"], 1),
+        "de_cada_100_cancelamentos_o_modelo_percebe": percebe,
+        "de_cada_100_cancelamentos_o_modelo_deixa_passar": 100 - percebe,
+        "de_cada_100_alertas_de_cancelamento_acertam": round(100 * METRICAS["precisao_teste"]),
+        "de_cada_100_alertas_de_cancelamento_sao_falsos": 100 - round(100 * METRICAS["precisao_teste"]),
+        "de_cada_100_reservas_o_modelo_acerta": round(100 * METRICAS["acuracia_teste"]),
+    })
+    return m
+
+
 def prever(entrada: dict) -> dict:
     """Roda o modelo treinado com uma entrada já preparada (use preparar() antes)."""
     X = para_o_modelo(entrada)                          # ponte: legível -> formato do modelo
