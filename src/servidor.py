@@ -1,33 +1,37 @@
 """
-Servidor: página de chat + rota /api/chat, que chama o nosso agente (agente.py).
+Servidor: página de chat + rota /api/chat, que chama o nosso agente (src/pipeline.py).
 
 A chave do Gemini fica SÓ aqui no servidor (variável de ambiente GEMINI_API_KEY).
 
-Rodar localmente:  crie o .env com GEMINI_API_KEY=... e rode  python app.py  -> http://localhost:5000
-Em produção (Render):  gunicorn app:app --workers 1 --threads 4 --timeout 120
+Rodar localmente:  crie o .env com GEMINI_API_KEY=... e rode  python src/servidor.py  -> http://localhost:5000
+Em produção (Render):  gunicorn src.servidor:app --workers 1 --threads 4 --timeout 120
 """
 import logging
 import os
+import sys
 import time
 from collections import defaultdict, deque
+from pathlib import Path
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request, send_from_directory
 
-load_dotenv()                                    # lê o .env, se existir (uso local)
+RAIZ = Path(__file__).resolve().parent.parent   # raiz do projeto (este arquivo está em src/)
+sys.path.insert(0, str(RAIZ))                   # permite rodar como script: python src/servidor.py
+load_dotenv(RAIZ / ".env")                      # lê o .env, se existir (uso local)
 _chave = os.environ.get("GEMINI_API_KEY", "")
 if not _chave or _chave.startswith("cole-aqui"):
     raise RuntimeError("Defina a variável de ambiente GEMINI_API_KEY com a sua chave (arquivo .env ou painel da hospedagem).")
 
 from google.genai import errors                  # noqa: E402
-import agente                                    # noqa: E402
+from src import pipeline                         # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 MAX_CARACTERES = 1000                            # tamanho máximo de uma mensagem
 LIMITE_POR_IP = (40, 600)                        # no máx. 40 mensagens a cada 10 min por IP
 LIMITE_GLOBAL = (150, 86400)                     # no máx. 150 mensagens/dia no app todo (~300-450 chamadas: protege a cota)
 
-app = Flask(__name__, static_folder="static")
+app = Flask(__name__, static_folder=str(RAIZ / "static"))
 app.config["MAX_CONTENT_LENGTH"] = 64 * 1024     # rejeita requisições maiores que 64 KB
 _acessos: dict[str, deque] = defaultdict(deque)
 
@@ -52,7 +56,7 @@ def pagina():
 @app.get("/saude")
 def saude():
     """Rota leve para "acordar" o app antes da apresentação."""
-    return jsonify(ok=True, modelo=agente.MODELO_GEMINI)
+    return jsonify(ok=True, modelo=pipeline.MODELO_GEMINI)
 
 
 @app.post("/api/chat")
@@ -74,7 +78,7 @@ def chat():
     historico = [h for h in historico if isinstance(h, dict)] if isinstance(historico, list) else []
 
     try:
-        resultado = agente.responder(mensagem, historico)
+        resultado = pipeline.responder(mensagem, historico)
     except errors.APIError as e:
         app.logger.warning("Erro do Gemini: %s", e)
         if getattr(e, "code", None) == 429:

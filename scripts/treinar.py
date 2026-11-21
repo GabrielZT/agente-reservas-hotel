@@ -2,13 +2,13 @@
 Treino do modelo do grupo: previsão de CANCELAMENTO de reservas de hotel (classificação).
 Dataset: Hotel Reservations (Kaggle, ahsan81) — o MESMO do Trabalho Prático anterior.
 
-    python treinar.py
+    python scripts/treinar.py
 
 Gera (rodar SEMPRE dentro do venv do kit, para as versões do scikit-learn/numpy baterem):
-  dados/dataset_legivel.csv        base LIMPA e LEGÍVEL (colunas e categorias em português) -> perguntas, RAG, casos
-  modelo/modelo.joblib             Pipeline completo (ColumnTransformer + MLPClassifier) -> aceita os dados legíveis
-  modelo/metricas.json             métricas REAIS no conjunto de teste
-  modelo/amostra_conferencia.json  5 entradas legíveis + previsão do treino (confere a ponte para_o_modelo)
+  data/dataset_legivel.csv         base LIMPA e LEGÍVEL (colunas e categorias em português) -> perguntas, RAG, casos
+  models/modelo.joblib             Pipeline completo (ColumnTransformer + MLPClassifier) -> aceita os dados legíveis
+  models/metricas.json             métricas REAIS no conjunto de teste
+  models/amostra_conferencia.json  5 entradas legíveis + previsão do treino (confere a ponte para_o_modelo)
 
 Mudanças em relação ao notebook do trabalho anterior:
   - mesmas regras de limpeza (duplicatas, 29/02/2018, reservas com 0 noites);
@@ -38,11 +38,11 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 warnings.filterwarnings("ignore", category=FutureWarning)
-os.chdir(Path(__file__).resolve().parent)
+os.chdir(Path(__file__).resolve().parent.parent)   # trabalha na raiz do projeto
 RANDOM_STATE = 42
 
 # ------------------------------------------------------------------ 1. carga e limpeza (igual ao notebook)
-bruto = pd.read_csv("dados/hotel_reservations_original.csv")
+bruto = pd.read_csv("data/hotel_reservations_original.csv")
 df = bruto.drop(columns="Booking_ID").drop_duplicates()
 
 
@@ -93,7 +93,7 @@ leg["total_noites"] = leg["noites_fim_de_semana"] + leg["noites_semana"]
 leg["faixa_antecedencia"] = pd.cut(leg["antecedencia_dias"], [-1, 7, 30, 90, 180, 10_000],
                                    labels=["0-7 dias", "8-30 dias", "31-90 dias", "91-180 dias", "mais de 180 dias"]).astype(str)
 assert leg.isna().sum().sum() == 0, "algum mapa de tradução deixou valores vazios"
-leg.to_csv("dados/dataset_legivel.csv", index=False)
+leg.to_csv("data/dataset_legivel.csv", index=False)
 
 # ------------------------------------------------------------------ 3. modelo (Pipeline completo)
 NUMERICAS = ["antecedencia_dias", "preco_medio_diaria", "pedidos_especiais", "mes_chegada",
@@ -142,13 +142,13 @@ metricas = {
     "atributos_do_modelo": NUMERICAS + CATEGORICAS,
     "sklearn_version": sklearn.__version__,
 }
-joblib.dump(melhor, "modelo/modelo.joblib")
+joblib.dump(melhor, "models/modelo.joblib")
 
-# Amostra para conferir a PONTE legível -> modelo (ferramentas.conferir_transformacao)
+# Amostra para conferir a PONTE legível -> modelo (dados_modelo.conferir_transformacao)
 amostra = [{"entrada": {k: (v.item() if hasattr(v, "item") else v) for k, v in linha.items()},
             "previsao_no_treino": (p.item() if hasattr(p, "item") else p)}
            for (_, linha), p in zip(X_te.head(5).iterrows(), melhor.predict(X_te.head(5)))]
-json.dump(amostra, open("modelo/amostra_conferencia.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-json.dump(metricas, open("modelo/metricas.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+json.dump(amostra, open("models/amostra_conferencia.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+json.dump(metricas, open("models/metricas.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 print(json.dumps(metricas, ensure_ascii=False, indent=1))
 print("Classes:", leg[ALVO].value_counts().to_dict(), "| linhas:", len(leg), "| numpy", np.__version__)

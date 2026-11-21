@@ -1,8 +1,8 @@
 """
-Versão STREAMLIT da página de chat: usa o MESMO agente (agente.py), só troca a interface.
+Versão STREAMLIT da página de chat: usa o MESMO agente (src/pipeline.py), só troca a interface.
 
-Rodar localmente (na pasta do kit, com o .env criado):
-    streamlit run versao_streamlit/streamlit_app.py
+Rodar localmente (na raiz do projeto, com o .env criado):
+    streamlit run streamlit_app/streamlit_app.py
 Publicar no Streamlit Community Cloud: veja o README (seção "Publicar no Streamlit").
 """
 import os
@@ -14,7 +14,7 @@ from pathlib import Path
 import streamlit as st
 
 RAIZ = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(RAIZ))                        # para importar agente.py e ferramentas.py da pasta do kit
+sys.path.insert(0, str(RAIZ))                        # para importar o pacote src/ da raiz do projeto
 
 try:                                                 # no Streamlit Cloud a chave vem de st.secrets
     if "GEMINI_API_KEY" in st.secrets:
@@ -29,7 +29,7 @@ if not os.environ.get("GEMINI_API_KEY", "").strip() or os.environ["GEMINI_API_KE
     st.stop()
 
 from google.genai import errors                      # noqa: E402
-import agente                                        # noqa: E402
+from src import pipeline                             # noqa: E402
 
 MAX_CARACTERES = 1000
 LIMITE_SESSAO = (40, 600)                            # 40 mensagens a cada 10 min por sessão
@@ -81,7 +81,7 @@ if pergunta:
     with st.chat_message("assistant"):
         try:
             with st.spinner("Consultando os dados..."):
-                resultado = agente.responder(pergunta, historico)
+                resultado = pipeline.responder(pergunta, historico)
         except errors.APIError as e:
             st.error("Limite gratuito do Gemini atingido. Tente de novo em instantes." if getattr(e, "code", None) == 429
                      else f"O agente está indisponível no momento (Gemini {getattr(e, 'code', '?')}).")

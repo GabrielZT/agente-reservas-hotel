@@ -105,7 +105,7 @@ Lembre-se de que esta é uma estimativa estatística e não uma garantia. O mode
 
 Como a antecedência informada é inválida, o sistema não pode fazer a previsão. Por favor, ajuste o valor da antecedência para que seja zero ou positivo e faça a pergunta novamente.
 
-**Avaliação:** **Certo.** A antecedência negativa virou erro de validação no nosso código (🔧 `validação: erro na entrada`), sem rodar o modelo, e a resposta explica o problema e como corrigir. Valores possíveis mas fora da faixa do treino (ex.: 600 dias) geram alerta e previsão com aviso; isso foi testado em `testar_sem_api.py`, não nesta bateria.
+**Avaliação:** **Certo.** A antecedência negativa virou erro de validação no nosso código (🔧 `validação: erro na entrada`), sem rodar o modelo, e a resposta explica o problema e como corrigir. Valores possíveis mas fora da faixa do treino (ex.: 600 dias) geram alerta e previsão com aviso; isso foi testado em `tests/teste_offline.py`, não nesta bateria.
 
 ## Previsão 4 - essa previsão faz sentido?
 

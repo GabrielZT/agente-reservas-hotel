@@ -2,10 +2,10 @@
 Bateria com as 12 categorias de teste da apresentação, com gabarito calculado pelo NOSSO código
 (pandas + modelo), para conferir se os números da resposta batem.
 
-    python testes/bateria.py                 -> testa o app publicado (Render)
-    python testes/bateria.py local           -> testa o agente local (usa a chave do .env)
-    python testes/bateria.py URL             -> testa outro endereço
-    python testes/bateria.py local 7,8       -> só os testes 7 e 8 (registro "parcial")
+    python tests/bateria.py                 -> testa o app publicado (Render)
+    python tests/bateria.py local           -> testa o agente local (usa a chave do .env)
+    python tests/bateria.py URL             -> testa outro endereço
+    python tests/bateria.py local 7,8       -> só os testes 7 e 8 (registro "parcial")
 
 Gasta cerca de 30 chamadas do Gemini. Salva um registro NOVO em docs/registro_testes_AAAAMMDD_HHMM.md
 (não sobrescreve o docs/registro_testes.md, que já tem as avaliações preenchidas).
@@ -27,7 +27,7 @@ from dotenv import load_dotenv  # noqa: E402
 
 load_dotenv(RAIZ / ".env")
 os.environ.setdefault("GEMINI_API_KEY", "teste-offline")
-import ferramentas as F  # noqa: E402
+from src import dados_modelo as F  # noqa: E402
 
 ALVO_URL = sys.argv[1] if len(sys.argv) > 1 else "https://agente-reservas-hotel.onrender.com"
 SO = {int(i) for i in sys.argv[2].split(",")} if len(sys.argv) > 2 else set()
@@ -36,8 +36,8 @@ PAUSA = 15            # segundos entre testes: o plano gratuito limita as chamad
 
 def _perguntar(mensagem: str, historico: list[dict]) -> dict:
     if ALVO_URL == "local":
-        import agente
-        return agente.responder(mensagem, historico)
+        from src import pipeline
+        return pipeline.responder(mensagem, historico)
     req = urllib.request.Request(f"{ALVO_URL.rstrip('/')}/api/chat",
                                  data=json.dumps({"mensagem": mensagem, "historico": historico}).encode(),
                                  headers={"Content-Type": "application/json"})

@@ -3,7 +3,7 @@ Comparação para o relatório: as MESMAS perguntas respondidas
   (a) pelo Gemini "puro", só com a persona (sem RAG, sem modelo, sem verificação), e
   (b) pelo nosso agente completo.
 
-    python testes/comparar_sem_rag.py            (usa a chave do .env; gasta ~3 chamadas por pergunta)
+    python tests/comparacao_rag.py            (usa a chave do .env; gasta ~3 chamadas por pergunta)
 
 Perguntas do nosso dataset (hotel); as diferenças vão para a seção "com RAG x sem RAG" do relatório.
 """
@@ -14,10 +14,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # importa os m
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 from google.genai import types  # noqa: E402
 
-import agente  # noqa: E402
+from src import pipeline  # noqa: E402
 
 PERGUNTAS = [
     "Qual segmento de mercado tem a maior taxa de cancelamento?",
@@ -29,8 +29,8 @@ PERGUNTAS = [
 ]
 
 for p in PERGUNTAS:
-    puro = agente._gemini(agente.INSTRUCOES, [types.Content(role="user", parts=[types.Part(text=p)])])
-    completo = agente.responder(p, [])
+    puro = pipeline._gemini(pipeline.INSTRUCOES, [types.Content(role="user", parts=[types.Part(text=p)])])
+    completo = pipeline.responder(p, [])
     print("=" * 80, "\nPERGUNTA:", p)
     print("\n[SEM RAG]\n", puro)
     print("\n[AGENTE COMPLETO]  etapas:", " · ".join(completo["etapas"]), "\n", completo["resposta"])

@@ -2,11 +2,11 @@
 Recuperação (o "R" do RAG): encontra na base de conhecimento os trechos mais relacionados
 com a pergunta, usando TF-IDF + similaridade de cosseno (scikit-learn, roda local e de graça).
 
-Base de conhecimento = arquivos .md da pasta conhecimento/ (descrição das colunas, limpeza, EDA,
+Base de conhecimento = arquivos .md da pasta knowledge_base/ (descrição das colunas, limpeza, EDA,
 modelo, métricas, limitações do trabalho anterior) + frases com números reais geradas do CSV
-(ferramentas.fatos_do_dataset()).
+(dados_modelo.fatos_do_dataset()).
 
-Além do kit (medido com avaliar_rag.py):
+Além do kit (medido com tests/avaliacao_rag.py):
   - duas representações combinadas: TF-IDF de PALAVRAS (1 e 2 palavras) e TF-IDF de pedaços de
     CARACTERES (4 e 5 letras), que casa "cancela" com "cancelamento" e "confiável" com "confiança";
   - expansão da pergunta com sinônimos do domínio ("confiável" -> métricas, limitações, erros...).
@@ -18,9 +18,9 @@ from pathlib import Path
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from ferramentas import fatos_do_dataset
+from .dados_modelo import fatos_do_dataset
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).resolve().parent.parent           # raiz do projeto (este arquivo está em src/)
 STOPWORDS_PT = """a o as os um uma uns umas de do da dos das no na nos nas em por para com sem sobre
 e ou que se qual quais quanto quanta quantos quantas como onde quando é são foi ser ter tem há mais menos
 muito pouco me te lhe isso isto esse essa este esta ao aos à às pelo pela pelos pelas meu minha seu sua
@@ -63,7 +63,7 @@ def _trechos_dos_arquivos() -> list[str]:
     """Quebra cada .md em trechos: parágrafos e itens de lista viram trechos separados,
     e cada trecho leva o título da sua seção (ex.: "Limitações: o modelo não conhece...")."""
     trechos = []
-    for arquivo in sorted((BASE / "conhecimento").glob("*.md")):
+    for arquivo in sorted((BASE / "knowledge_base").glob("*.md")):
         secao = ""
         for linha_ou_bloco in re.split(r"\n\s*\n|\n(?=\s*[-*] )|\n(?=#)", arquivo.read_text(encoding="utf-8")):
             bloco = linha_ou_bloco.strip()

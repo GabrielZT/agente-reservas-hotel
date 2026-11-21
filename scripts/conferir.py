@@ -2,17 +2,20 @@
 Gera o "gabarito" do agente direto do CSV e do modelo do repositório (regressão OU classificação).
 O professor roda este script no commit entregue de cada grupo para conferir os números da bateria.
 
-    python conferir.py                  -> estatísticas + previsões das 3 primeiras linhas do dataset
-    python conferir.py entradas.csv     -> previsões para as linhas de um CSV com as colunas de entrada
+    python scripts/conferir.py                  -> estatísticas + previsões das 3 primeiras linhas do dataset
+    python scripts/conferir.py entradas.csv     -> previsões para as linhas de um CSV com as colunas de entrada
                                            (recomendado: use casos NOVOS, que não estão no dataset)
 
-Funciona sem chave do Gemini. Usa ALVO, NUMERICAS e CATEGORICAS de ferramentas.py (alvo: cancelada sim/nao).
+Funciona sem chave do Gemini. Usa ALVO, NUMERICAS e CATEGORICAS de src/dados_modelo.py (alvo: cancelada sim/nao).
 """
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # importa o pacote src/ da raiz
 
 import pandas as pd
 
-from ferramentas import ALVO, CATEGORICAS, DF, METRICAS, MODELO, NUMERICAS, conferir_transformacao, para_o_modelo
+from src.dados_modelo import ALVO, CATEGORICAS, DF, METRICAS, MODELO, NUMERICAS, conferir_transformacao, para_o_modelo
 
 pd.set_option("display.width", 200, "display.max_columns", None)
 CLASSIF = hasattr(MODELO, "classes_")          # classificador do sklearn (Pipeline incluso) tem classes_

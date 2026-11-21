@@ -2,7 +2,7 @@
 Dados e modelo do grupo: tudo o que é DETERMINÍSTICO (não usa o Gemini).
 Domínio: cancelamento de reservas de hotel (Hotel Reservations, Kaggle) — CLASSIFICAÇÃO.
 
-O agente (agente.py) decide QUANDO usar cada função; aqui fica O QUE cada uma faz:
+O agente (pipeline.py) decide QUANDO usar cada função; aqui fica O QUE cada uma faz:
   - preparar(entrada)                       -> converte texto em valores, valida (erro x alerta)
   - prever(entrada)                         -> roda o modelo .joblib (classe + probabilidade)
   - casos_semelhantes(entrada)              -> reservas reais parecidas no dataset (validação)
@@ -23,10 +23,10 @@ import pandas as pd
 import sklearn
 
 log = logging.getLogger(__name__)
-BASE = Path(__file__).parent
-MODELO = joblib.load(BASE / "modelo" / "modelo.joblib")
-METRICAS = json.loads((BASE / "modelo" / "metricas.json").read_text(encoding="utf-8"))
-DF = pd.read_csv(BASE / "dados" / "dataset_legivel.csv")
+BASE = Path(__file__).resolve().parent.parent           # raiz do projeto (este arquivo está em src/)
+MODELO = joblib.load(BASE / "models" / "modelo.joblib")
+METRICAS = json.loads((BASE / "models" / "metricas.json").read_text(encoding="utf-8"))
+DF = pd.read_csv(BASE / "data" / "dataset_legivel.csv")
 
 TAREFA = "classificacao"
 ALVO = "cancelada"                                     # classes: "sim" (cancelada) / "nao"
@@ -97,7 +97,7 @@ MESES = [_norm(m) for m in NOMES_MESES]                 # sem acento, para compa
 
 # ---------------------------------------------------------------- PONTE: dataset legível -> modelo
 # Caso 1 do kit: o pré-processamento (StandardScaler + OneHotEncoder) está DENTRO do Pipeline salvo
-# por treinar.py. Por isso a ponte só monta o DataFrame com as colunas na ordem do treino.
+# por scripts/treinar.py. Por isso a ponte só monta o DataFrame com as colunas na ordem do treino.
 # conferir_transformacao() compara, ao iniciar o app, as previsões desta ponte com as do treino.
 def para_o_modelo(entrada: dict) -> pd.DataFrame:
     """Entrada legível (dict) -> DataFrame no formato que o modelo espera."""
@@ -105,11 +105,11 @@ def para_o_modelo(entrada: dict) -> pd.DataFrame:
 
 
 def conferir_transformacao() -> dict:
-    """Refaz as previsões da amostra salva no treino (modelo/amostra_conferencia.json) passando
+    """Refaz as previsões da amostra salva no treino (models/amostra_conferencia.json) passando
     pela ponte para_o_modelo(). Se não baterem, a transformação está diferente da do treino."""
-    arquivo = BASE / "modelo" / "amostra_conferencia.json"
+    arquivo = BASE / "models" / "amostra_conferencia.json"
     if not arquivo.exists():
-        return {"ok": False, "detalhes": ["modelo/amostra_conferencia.json não existe: rodem treinar.py"]}
+        return {"ok": False, "detalhes": ["models/amostra_conferencia.json não existe: rodem scripts/treinar.py"]}
     problemas = []
     for item in json.loads(arquivo.read_text(encoding="utf-8")):
         try:

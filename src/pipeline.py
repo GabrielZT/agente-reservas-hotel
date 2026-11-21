@@ -6,7 +6,7 @@ Cada mensagem passa por um pipeline com etapas explícitas:
   1. INTERPRETAR  (Gemini, resposta em JSON) -> intenção + atributos citados + consulta + busca
   2. RECUPERAR    (nosso código)             -> trechos da base de conhecimento (TF-IDF) + estatísticas (pandas)
   3. PREVER       (nosso código)             -> confere o que falta, valida, transforma para o formato do modelo
-                                                (ferramentas.para_o_modelo), roda o modelo, busca casos semelhantes
+                                                (dados_modelo.para_o_modelo), roda o modelo, busca casos semelhantes
   4. GERAR        (Gemini)                   -> escreve a resposta usando SÓ o contexto montado nas etapas 2 e 3
   5. VERIFICAR    (nosso código)             -> confere se os números da resposta existem no contexto;
                                                 se não, pede uma nova resposta (1 vez) ou avisa o usuário
@@ -21,8 +21,8 @@ import time
 from google import genai
 from google.genai import types
 
-import ferramentas as F
-from recuperacao import RECUPERADOR
+from . import dados_modelo as F
+from .busca_rag import RECUPERADOR
 
 MODELO_GEMINI = "gemini-3.5-flash-lite"                 # modelo FIXO do trabalho — não trocar
 PROMPTS = F.BASE / "prompts"

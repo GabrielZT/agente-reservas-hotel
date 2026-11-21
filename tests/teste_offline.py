@@ -1,4 +1,4 @@
-"""Testa dados, modelo, RAG e verificação SEM gastar cota do Gemini:  python testes/testar_sem_api.py
+"""Testa dados, modelo, RAG e verificação SEM gastar cota do Gemini:  python tests/teste_offline.py
 Monta os exemplos a partir da 1ª linha do CSV e testa também: erros de domínio do hotel, linguagem natural
 ("2 semanas", "julho", "sem" = 0), filtros nas consultas e o conversor de números (com assert)."""
 import sys
@@ -9,9 +9,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # importa os m
 import os
 os.environ.setdefault("GEMINI_API_KEY", "teste-offline")       # o Gemini não é chamado aqui
 
-import ferramentas as F
-from agente import verificar
-from recuperacao import RECUPERADOR
+from src import dados_modelo as F
+from src.pipeline import verificar
+from src.busca_rag import RECUPERADOR
 
 print("Conferência da ponte legível -> modelo:", F.conferir_transformacao())
 linha = F.DF.iloc[0]

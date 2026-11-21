@@ -1,5 +1,5 @@
 """
-Avaliação da BUSCA do RAG (além do kit), sem gastar cota do Gemini:   python testes/avaliar_rag.py
+Avaliação da BUSCA do RAG (além do kit), sem gastar cota do Gemini:   python tests/avaliacao_rag.py
 
 Para cada pergunta de teste há um pedaço de texto que o trecho CERTO contém. Medimos:
   - acerto@k: o trecho certo veio entre os k primeiros?
@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # importa os m
 import os
 
 os.environ.setdefault("GEMINI_API_KEY", "teste-offline")
-from recuperacao import Recuperador  # noqa: E402
+from src.busca_rag import Recuperador  # noqa: E402
 
 TESTES = [
     ("qual segmento cancela mais?", "Taxa de cancelamento por segmento de mercado"),

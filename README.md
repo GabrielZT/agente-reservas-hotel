@@ -19,31 +19,42 @@ mensagem → 1 INTERPRETAR (Gemini → JSON: intenção, atributos, consulta + f
          → 5 VERIFICAR   (todo número da resposta está no CONTEXTO? senão refaz 1 vez ou avisa)
 ```
 
-Sem function calling automático e sem API de agentes: o `agente.py` decide cada etapa e chama `generate_content` diretamente.
+Sem function calling automático e sem API de agentes: o `src/pipeline.py` decide cada etapa e chama `generate_content` diretamente.
 
 ## Estrutura
 
-| Arquivo | O que faz |
-|---|---|
-| `treinar.py` | limpeza (igual ao trabalho anterior), gera `dados/dataset_legivel.csv` e treina o Pipeline (StandardScaler + OneHotEncoder + MLP) com GridSearchCV; salva `modelo/` |
-| `ferramentas.py` | constantes do domínio, ponte `para_o_modelo()`, validação, previsão, casos semelhantes, estatísticas com filtros, fatos para o RAG |
-| `agente.py` | pipeline das 5 etapas |
-| `recuperacao.py` | busca na base de conhecimento |
-| `conhecimento/*.md` | análise do trabalho anterior: colunas, limpeza, EDA, modelo, métricas, limitações |
-| `prompts/` | instruções das etapas 1 (interpretar) e 4 (responder) |
-| `app.py` + `static/index.html` | servidor Flask e página de chat (Render) |
-| `testes/testar_sem_api.py` | testes sem gastar cota (ponte, validação, erros de domínio, linguagem natural, filtros, RAG, verificação) |
-| `testes/avaliar_rag.py` | mede a qualidade da busca com 20 perguntas de teste |
-| `conferir.py` | gabarito (estatísticas e previsões) a partir do CSV e do modelo |
-| `testes/comparar_sem_rag.py` | mesmas perguntas com e sem RAG (relatório e demonstração) |
-| `testes/bateria.py` | as 12 categorias da bateria da apresentação, com gabarito do nosso código |
-| `docs/registro_testes.md` | registro da bateria (pergunta, etapas, tempo, resposta, avaliação) |
+```
+agente-reservas-hotel/
+├── src/                código principal do agente
+│   ├── servidor.py         servidor Flask + rota /api/chat (Render: gunicorn src.servidor:app)
+│   ├── pipeline.py         pipeline das 5 etapas (interpretar, recuperar, prever, gerar, verificar)
+│   ├── dados_modelo.py     domínio do hotel, ponte para_o_modelo(), validação, previsão, casos semelhantes, estatísticas, fatos do RAG
+│   └── busca_rag.py        busca na base de conhecimento (TF-IDF + sinônimos)
+├── scripts/
+│   ├── treinar.py          limpeza + treino do modelo (gera data/dataset_legivel.csv e models/)
+│   └── conferir.py         gabarito: estatísticas e previsões a partir do CSV e do modelo
+├── tests/
+│   ├── teste_offline.py    testes sem gastar cota (ponte, validação, erros de domínio, linguagem natural, filtros, RAG, verificação)
+│   ├── avaliacao_rag.py    qualidade da busca com 20 perguntas de teste
+│   ├── bateria.py          as 12 categorias da bateria da apresentação, com gabarito do nosso código
+│   └── comparacao_rag.py   mesmas perguntas com e sem RAG (relatório e demonstração)
+├── docs/
+│   ├── links.txt           arquivo de entrega (app, GitHub, hash do commit)
+│   ├── registro_testes.md  registro avaliado da bateria de testes
+│   └── README_KIT_ORIGINAL.md
+├── prompts/            instruções das etapas 1 (interpretar.md) e 4 (responder.md)
+├── knowledge_base/     base de conhecimento do RAG: análise do trabalho anterior
+├── data/               dataset original do Kaggle e dataset limpo e legível
+├── models/             modelo.joblib, metricas.json, amostra_conferencia.json
+├── static/             página de chat (index.html)
+└── streamlit_app/      versão alternativa da interface em Streamlit (não publicada)
+```
 
 ## Modelo
 
 - Classificação binária: `cancelada` = `sim` / `nao` (classe positiva: `sim`).
 - 8 atributos (o enunciado permite até 8): `antecedencia_dias`, `preco_medio_diaria`, `pedidos_especiais`, `mes_chegada`, `noites_fim_de_semana`, `noites_semana`, `segmento_mercado`, `vaga_estacionamento`. Na validação cruzada, o MLP com esses 8 teve F1 0,7020 contra 0,7028 com os 17 originais.
-- Métricas de teste reais em `modelo/metricas.json` (acurácia, F1, precisão, recall, especificidade, AUC).
+- Métricas de teste reais em `models/metricas.json` (acurácia, F1, precisão, recall, especificidade, AUC).
 
 ## Como rodar
 
@@ -51,16 +62,16 @@ Sem function calling automático e sem API de agentes: o `agente.py` decide cada
 python -m venv .venv            # Python 3.13
 .venv\Scripts\activate          # Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
-python treinar.py               # opcional: o modelo já está em modelo/
-python testes/testar_sem_api.py
-python testes/avaliar_rag.py
-python testes/bateria.py local    # gasta ~30 chamadas do Gemini
-python conferir.py
+python scripts/treinar.py       # opcional: o modelo já está em models/
+python tests/teste_offline.py
+python tests/avaliacao_rag.py
+python tests/bateria.py local    # gasta ~30 chamadas do Gemini
+python scripts/conferir.py
 copy .env.example .env          # e colem a GEMINI_API_KEY
-python app.py                   # http://localhost:5000
+python src/servidor.py          # http://localhost:5000
 ```
 
-Deploy no Render: build `pip install -r requirements.txt`, start `gunicorn app:app --workers 1 --threads 4 --timeout 120`, variáveis `GEMINI_API_KEY` e `PYTHON_VERSION=3.13.15`. A chave **nunca** vai para o código nem para o GitHub (`.env` está no `.gitignore`).
+Deploy no Render: build `pip install -r requirements.txt`, start `gunicorn src.servidor:app --workers 1 --threads 4 --timeout 120`, variáveis `GEMINI_API_KEY` e `PYTHON_VERSION=3.13.15`. A chave **nunca** vai para o código nem para o GitHub (`.env` está no `.gitignore`).
 
 > Chave do Gemini: criada no Google AI Studio com a conta UNOESC, no plano gratuito, para o modelo `gemini-3.5-flash-lite`.
 > Auto-Deploy desligado no Render: depois de cada push é preciso publicar manualmente (**Manual Deploy → Deploy latest commit**).
@@ -72,9 +83,9 @@ Deploy no Render: build `pip install -r requirements.txt`, start `gunicorn app:a
 3. **Entrada em linguagem natural:** "2 semanas" → 14 dias, "3 meses" → 90, "julho" → 7, "duas" → 2, "nenhum", "sem" ou "não" → 0 (só quando não há outro número na frase), "1 milhão" → 1.000.000, "não precisa de vaga" → `nao`, "empresa" → Corporativo.
 4. **Regras de domínio do hotel:** antecedência negativa, mês fora de 1–12, estadia sem noites, diária negativa ou acima de 5.000 € viram **erro**; valores fora da faixa do treino viram **alerta**; diária 0 fora do segmento Cortesia gera alerta.
 5. **Previsão mais explicada:** probabilidade de cancelamento em %, grau de confiança (perto do limiar de 50% = baixa), recall e precisão de teste junto da previsão; casos semelhantes com 15 reservas reais do mesmo segmento (e mesma vaga), percentual cancelado entre elas e taxa geral do dataset para comparação.
-6. **RAG melhor, e medido:** base dividida em 3 arquivos com trechos curtos; mais fatos gerados do CSV (taxa por segmento, plano, quarto, vaga, recorrência, faixa de antecedência, pedidos especiais, mês com nome, erros do modelo, comparação com o palpite ingênuo); busca combinando TF-IDF de palavras e de pedaços de letras, com expansão por sinônimos do domínio. Com `testes/avaliar_rag.py` (20 perguntas de teste), o acerto nos 5 primeiros trechos subiu de 70% (busca do kit) para 95%, e as 3 perguntas fora do escopo não trazem nenhum trecho.
+6. **RAG melhor, e medido:** base dividida em 3 arquivos com trechos curtos; mais fatos gerados do CSV (taxa por segmento, plano, quarto, vaga, recorrência, faixa de antecedência, pedidos especiais, mês com nome, erros do modelo, comparação com o palpite ingênuo); busca combinando TF-IDF de palavras e de pedaços de letras, com expansão por sinônimos do domínio. Com `tests/avaliacao_rag.py` (20 perguntas de teste), o acerto nos 5 primeiros trechos subiu de 70% (busca do kit) para 95%, e as 3 perguntas fora do escopo não trazem nenhum trecho.
 7. **Página:** exemplos clicáveis, aviso de "servidor acordando" quando a resposta demora, layout para celular.
-8. **Testes próprios:** `testes/testar_sem_api.py` cobre casos impossíveis do domínio, linguagem natural e filtros, com `assert`.
-9. **Bateria automatizada:** `testes/bateria.py` roda as 12 categorias da apresentação (no Render ou local), calcula o gabarito com o nosso código e salva um registro datado em `docs/` (o avaliado para o relatório é `docs/registro_testes.md`).
+8. **Testes próprios:** `tests/teste_offline.py` cobre casos impossíveis do domínio, linguagem natural e filtros, com `assert`.
+9. **Bateria automatizada:** `tests/bateria.py` roda as 12 categorias da apresentação (no Render ou local), calcula o gabarito com o nosso código e salva um registro datado em `docs/` (o avaliado para o relatório é `docs/registro_testes.md`).
 10. **Verificação mais transparente e mais barata:** quando a resposta é refeita, a linha 🔧 mostra quais números não foram conferidos. Com isso descobrimos que o Gemini fazia contas ("deixa passar 32 de cada 100" = 100 − 68). Passamos a entregar essas contas prontas no contexto (`metricas_explicadas()`) e incluímos o prompt da persona entre os textos confiáveis (ele cita "2017 e 2018"). Na bateria, as respostas refeitas caíram de 5 em 10 respostas geradas para 0 em 12, economizando chamadas da cota.
 11. **"Essa previsão faz sentido?":** a etapa 1 passou a repassar os dados da reserva em qualquer intenção, então o código roda de novo o modelo e os casos semelhantes nessa pergunta (antes ele só repetia os números da resposta anterior).
