@@ -62,7 +62,8 @@ python app.py                   # http://localhost:5000
 
 Deploy no Render: build `pip install -r requirements.txt`, start `gunicorn app:app --workers 1 --threads 4 --timeout 120`, variáveis `GEMINI_API_KEY` e `PYTHON_VERSION=3.13.15`. A chave **nunca** vai para o código nem para o GitHub (`.env` está no `.gitignore`).
 
-> Chave do Gemini: a conta UNOESC não conseguiu criar a chave no AI Studio (erro "Project creation is disabled"). Conforme o enunciado, usamos uma conta Google pessoal, no plano gratuito, com o modelo `gemini-3.5-flash-lite`.
+> Chave do Gemini: criada no Google AI Studio com a conta UNOESC, no plano gratuito, para o modelo `gemini-3.5-flash-lite`.
+> Auto-Deploy desligado no Render: depois de cada push é preciso publicar manualmente (**Manual Deploy → Deploy latest commit**).
 
 ## O que mudamos em relação ao kit
 
