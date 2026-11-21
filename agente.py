@@ -33,7 +33,8 @@ client = genai.Client(
     api_key=os.environ["GEMINI_API_KEY"],
     http_options=types.HttpOptions(
         timeout=15_000,                                  # 15 s por chamada (milissegundos)
-        retry_options=types.HttpRetryOptions(attempts=2, initial_delay=2, max_delay=6,
+        # 429 = limite POR MINUTO do plano gratuito: esperar alguns segundos costuma resolver
+        retry_options=types.HttpRetryOptions(attempts=3, initial_delay=3, max_delay=10,
                                              http_status_codes=[429, 500, 503]),
     ),
 )
@@ -188,7 +189,7 @@ def responder(mensagem: str, historico: list[dict]) -> dict:
         return {"resposta": "Posso ajudar só com perguntas sobre este dataset e o modelo de previsão. "
                             "Quer saber algo sobre os dados ou estimar um caso?", "etapas": etapas}
 
-    contexto = {"metricas_do_modelo": {k: v for k, v in F.METRICAS.items() if k != "sklearn_version"}}
+    contexto = {"metricas_do_modelo": F.metricas_explicadas()}            # já traz as contas "de cada 100"
     trechos = RECUPERADOR.buscar(info["busca"])                               # 2
     contexto["base_de_conhecimento"] = [t["trecho"] for t in trechos]
     etapas.append(f"RAG: {len(trechos)} trecho(s)")
@@ -199,7 +200,8 @@ def responder(mensagem: str, historico: list[dict]) -> dict:
             filtros = c.get("filtros") if isinstance(c.get("filtros"), list) else []
             contexto["estatisticas"] = F.estatisticas(c["coluna"], c.get("agrupar_por", ""), filtros)
             aplicados = contexto["estatisticas"].get("filtros_aplicados", [])
-            etapas.append(f"estatísticas: {c['coluna']}" + (f" por {c['agrupar_por']}" if c.get("agrupar_por") else "")
+            agrupado = c.get("agrupar_por") and c.get("agrupar_por") != c["coluna"]
+            etapas.append(f"estatísticas: {c['coluna']}" + (f" por {c['agrupar_por']}" if agrupado else "")
                           + (f" com filtro {' e '.join(aplicados)}" if aplicados else ""))
 
     # "essa previsão faz sentido?" (explicação) com todos os dados também roda o modelo e os casos
@@ -234,16 +236,18 @@ def responder(mensagem: str, historico: list[dict]) -> dict:
     conversa = _conversa(historico, pedido)
     resposta = _gemini(INSTRUCOES, conversa)                                  # 4
 
-    # números "confiáveis": a mensagem atual e as respostas anteriores do agente que passaram na verificação
-    textos = [mensagem] + [str(h.get("texto", "")) for h in historico[-MAX_HISTORICO:]
+    # números "confiáveis": a mensagem atual, as nossas instruções (ex.: "2017 e 2018", limiar de 50%)
+    # e as respostas anteriores do agente que passaram na verificação
+    textos = [mensagem, INSTRUCOES] + [str(h.get("texto", "")) for h in historico[-MAX_HISTORICO:]
                            if h.get("papel") == "model" and "⚠️" not in str(h.get("texto", ""))]
     suspeitos = verificar(resposta, contexto, textos)                         # 5
     if suspeitos and time.monotonic() - inicio < 25:          # só refaz se ainda houver tempo
+        lista = ", ".join(f"{n:g}" for n in suspeitos)
         aviso = (f"\n\nATENÇÃO: sua resposta anterior trazia números que não estão no CONTEXTO "
-                 f"({', '.join(f'{n:g}' for n in suspeitos)}). Reescreva usando somente números do CONTEXTO.")
+                 f"({lista}). Reescreva usando somente números do CONTEXTO.")
         resposta = _gemini(INSTRUCOES, _conversa(historico, pedido + aviso))
         suspeitos = verificar(resposta, contexto, textos)
-        etapas.append("verificação: refeita")
+        etapas.append(f"verificação: refeita (não conferidos: {lista})")
     if suspeitos:
         resposta += "\n\n(⚠️ Alguns números desta resposta não puderam ser conferidos no dataset.)"
         etapas.append("verificação: números não conferidos")

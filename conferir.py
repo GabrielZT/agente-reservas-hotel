@@ -6,7 +6,7 @@ O professor roda este script no commit entregue de cada grupo para conferir os n
     python conferir.py entradas.csv     -> previsões para as linhas de um CSV com as colunas de entrada
                                            (recomendado: use casos NOVOS, que não estão no dataset)
 
-Funciona sem chave do Gemini. Mantenham ALVO, NUMERICAS e CATEGORICAS corretos em ferramentas.py.
+Funciona sem chave do Gemini. Usa ALVO, NUMERICAS e CATEGORICAS de ferramentas.py (alvo: cancelada sim/nao).
 """
 import sys
 
