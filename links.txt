@@ -1,0 +1,5 @@
+Grupo: Gabriel Turri; Luis Ferronato Kohn
+App: https://nome-do-app.onrender.com
+GitHub: https://github.com/usuario/repositorio
+Commit entregue (hash): abc1234
+Chave reserva para a apresentação: sim/não

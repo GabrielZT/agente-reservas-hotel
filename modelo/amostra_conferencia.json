@@ -1,0 +1,67 @@
+[
+ {
+  "entrada": {
+   "antecedencia_dias": 0,
+   "preco_medio_diaria": 0.0,
+   "pedidos_especiais": 0,
+   "mes_chegada": 7,
+   "noites_fim_de_semana": 1,
+   "noites_semana": 1,
+   "segmento_mercado": "Cortesia",
+   "vaga_estacionamento": "nao"
+  },
+  "previsao_no_treino": "nao"
+ },
+ {
+  "entrada": {
+   "antecedencia_dias": 1,
+   "preco_medio_diaria": 96.0,
+   "pedidos_especiais": 1,
+   "mes_chegada": 3,
+   "noites_fim_de_semana": 0,
+   "noites_semana": 1,
+   "segmento_mercado": "Online",
+   "vaga_estacionamento": "nao"
+  },
+  "previsao_no_treino": "nao"
+ },
+ {
+  "entrada": {
+   "antecedencia_dias": 10,
+   "preco_medio_diaria": 93.0,
+   "pedidos_especiais": 0,
+   "mes_chegada": 3,
+   "noites_fim_de_semana": 1,
+   "noites_semana": 0,
+   "segmento_mercado": "Online",
+   "vaga_estacionamento": "nao"
+  },
+  "previsao_no_treino": "sim"
+ },
+ {
+  "entrada": {
+   "antecedencia_dias": 86,
+   "preco_medio_diaria": 49.07,
+   "pedidos_especiais": 0,
+   "mes_chegada": 11,
+   "noites_fim_de_semana": 1,
+   "noites_semana": 2,
+   "segmento_mercado": "Offline",
+   "vaga_estacionamento": "nao"
+  },
+  "previsao_no_treino": "nao"
+ },
+ {
+  "entrada": {
+   "antecedencia_dias": 14,
+   "preco_medio_diaria": 85.0,
+   "pedidos_especiais": 0,
+   "mes_chegada": 7,
+   "noites_fim_de_semana": 2,
+   "noites_semana": 4,
+   "segmento_mercado": "Offline",
+   "vaga_estacionamento": "nao"
+  },
+  "previsao_no_treino": "nao"
+ }
+]
