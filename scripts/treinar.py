@@ -32,10 +32,13 @@ import joblib
 import numpy as np
 import pandas as pd
 import sklearn
+from sklearn.base import clone
 from sklearn.compose import ColumnTransformer
-from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score, precision_score,
-                             recall_score, roc_auc_score)
-from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_split
+from sklearn.base import clone
+from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score, make_scorer,
+                             precision_score, recall_score, roc_auc_score)
+from sklearn.model_selection import (GridSearchCV, StratifiedKFold, TunedThresholdClassifierCV,
+                                     train_test_split)
 from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
@@ -125,6 +128,16 @@ melhor = grid.best_estimator_
 melhor.fit(X_tr, y_tr)
 prev = melhor.predict(X_te)
 proba_sim = melhor.predict_proba(X_te)[:, list(melhor.classes_).index("sim")]
+
+# Limiar de decisão escolhido por validação cruzada, só com os dados de treino (sugestão do professor)
+ajuste_limiar = TunedThresholdClassifierCV(clone(melhor), scoring=make_scorer(f1_score, pos_label="sim"),
+                                           cv=cv, refit=True, n_jobs=-1)
+ajuste_limiar.fit(X_tr, y_tr)
+limiar = float(ajuste_limiar.best_threshold_)
+prev_padrao = prev                                  # previsões com o limiar 0,5 (antes)
+prev = np.where(proba_sim >= limiar, "sim", "nao")  # previsões de teste com o limiar escolhido
+print(f"Limiar escolhido por validação cruzada: {limiar:.3f}")
+
 vn, fp, fn, vp = confusion_matrix(y_te, prev, labels=["nao", "sim"]).ravel()
 parametros = {k.replace("clf__", ""): (list(v) if isinstance(v, tuple) else v) for k, v in grid.best_params_.items()}
 metricas = {
@@ -136,6 +149,10 @@ metricas = {
     "especificidade_teste": round(float(vn / (vn + fp)), 3),
     "auc_teste": round(float(roc_auc_score((y_te == "sim").astype(int), proba_sim)), 3),
     "f1_validacao_cruzada": round(float(grid.best_score_), 3),
+    "limiar_de_decisao": round(limiar, 3),
+    "f1_validacao_cruzada_limiar": round(float(ajuste_limiar.best_score_), 3),
+    "f1_teste_limiar_0_5": round(float(f1_score(y_te, prev_padrao, pos_label="sim")), 3),
+    "recall_teste_limiar_0_5": round(float(recall_score(y_te, prev_padrao, pos_label="sim")), 3),
     "acuracia_de_quem_sempre_diz_nao": round(float((y_te == "nao").mean()), 3),
     "reservas_teste": int(len(y_te)),
     "canceladas_no_teste": int((y_te == "sim").sum()),
