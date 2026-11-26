@@ -9,6 +9,8 @@ Gera (rodar SEMPRE dentro do venv do kit, para as versões do scikit-learn/numpy
   models/modelo.joblib             Pipeline completo (ColumnTransformer + MLPClassifier) -> aceita os dados legíveis
   models/metricas.json             métricas REAIS no conjunto de teste
   models/amostra_conferencia.json  5 entradas legíveis + previsão do treino (confere a ponte para_o_modelo)
+  models/resultados_gridsearch.csv  tabela do GridSearchCV (todas as combinações) -> relatório
+  models/metricas_teste.csv         métricas do teste em CSV -> relatório
 
 Mudanças em relação ao notebook do trabalho anterior:
   - mesmas regras de limpeza (duplicatas, 29/02/2018, reservas com 0 noites);
@@ -151,5 +153,14 @@ amostra = [{"entrada": {k: (v.item() if hasattr(v, "item") else v) for k, v in l
            for (_, linha), p in zip(X_te.head(5).iterrows(), melhor.predict(X_te.head(5)))]
 json.dump(amostra, open("models/amostra_conferencia.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 json.dump(metricas, open("models/metricas.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+
+# Tabelas do relatório, geradas desta mesma execução (consistência pedida no feedback)
+res = pd.DataFrame(grid.cv_results_)
+colunas = ["param_clf__hidden_layer_sizes", "param_clf__alpha", "mean_test_f1", "std_test_f1",
+           "mean_test_auc", "std_test_auc", "rank_test_f1"]
+res[colunas].sort_values("rank_test_f1").to_csv("models/resultados_gridsearch.csv",
+                                                index=False, encoding="utf-8-sig")
+pd.Series(metricas).to_frame("valor").to_csv("models/metricas_teste.csv", encoding="utf-8-sig")
+
 print(json.dumps(metricas, ensure_ascii=False, indent=1))
 print("Classes:", leg[ALVO].value_counts().to_dict(), "| linhas:", len(leg), "| numpy", np.__version__)
