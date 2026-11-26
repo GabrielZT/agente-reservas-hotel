@@ -16,7 +16,8 @@ Mudanças em relação ao notebook do trabalho anterior:
   - subconjunto de 8 atributos (o enunciado permite até 8): na validação cruzada o MLP com esses 8
     teve F1 0,7020 contra 0,7028 com os 17 originais, ou seja, praticamente o mesmo desempenho;
   - arrival_year ficou de fora: só tem 2017 e 2018 e não faz sentido para reservas futuras;
-  - grade do MLP ampliada em alpha (0,05 e 0,1), como sugerido nas melhorias do trabalho anterior.
+  - grade do MLP com alpha ampliada até 3,0 (0,001 a 3,0), porque no trabalho anterior o melhor valor 
+    (0,1) ficou na borda da grade, como apontou o feedback do professor.
 """
 import datetime
 import json
@@ -108,7 +109,7 @@ prep = ColumnTransformer([("num", StandardScaler(), NUMERICAS),
                           ("cat", OneHotEncoder(handle_unknown="ignore"), CATEGORICAS)])
 pipe = Pipeline([("prep", prep), ("clf", MLPClassifier(max_iter=1000, random_state=RANDOM_STATE))])
 grade = {"clf__hidden_layer_sizes": [(50,), (100,), (100, 50)],
-         "clf__alpha": [0.001, 0.01, 0.05, 0.1]}
+         "clf__alpha": [0.001, 0.01, 0.05, 0.1, 0.3, 1.0, 3.0]}
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
 grid = GridSearchCV(pipe, grade, cv=cv, n_jobs=-1,
                     scoring={"f1": "f1", "auc": "roc_auc"}, refit="f1")
