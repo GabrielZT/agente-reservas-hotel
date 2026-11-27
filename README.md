@@ -26,7 +26,7 @@ Sem function calling automático e sem API de agentes: o `src/pipeline.py` decid
 ```
 agente-reservas-hotel/
 ├── src/                código principal do agente
-│   ├── servidor.py         servidor Flask + rota /api/chat (Render: gunicorn src.servidor:app)
+│   ├── servidor.py         servidor Flask + rota /api/chat (Render: gunicorn src.servidor:app --bind 0.0.0.0:10000)
 │   ├── pipeline.py         pipeline das 5 etapas (interpretar, recuperar, prever, gerar, verificar)
 │   ├── dados_modelo.py     domínio do hotel, ponte para_o_modelo(), validação, previsão, casos semelhantes, estatísticas, fatos do RAG
 │   └── busca_rag.py        busca na base de conhecimento (TF-IDF + sinônimos)
@@ -73,7 +73,7 @@ copy .env.example .env          # e colem a GEMINI_API_KEY
 python src/servidor.py          # http://localhost:5000
 ```
 
-Deploy no Render: build `pip install -r requirements.txt`, start `gunicorn src.servidor:app --workers 1 --threads 4 --timeout 120`, variáveis `GEMINI_API_KEY` e `PYTHON_VERSION=3.13.15`. A chave **nunca** vai para o código nem para o GitHub (`.env` está no `.gitignore`).
+Deploy no Render: build `pip install -r requirements.txt`, start `gunicorn src.servidor:app --bind 0.0.0.0:10000 --workers 1 --threads 4 --timeout 120` (o `--bind` garante a porta que o Render procura), variáveis `GEMINI_API_KEY` e `PYTHON_VERSION=3.13.15`. A chave **nunca** vai para o código nem para o GitHub (`.env` está no `.gitignore`).
 
 > Chave do Gemini: criada no Google AI Studio com a conta UNOESC, no plano gratuito, para o modelo `gemini-3.5-flash-lite`.
 > Auto-Deploy desligado no Render: depois de cada push é preciso publicar manualmente (**Manual Deploy → Deploy latest commit**).

@@ -4,7 +4,7 @@ Servidor: página de chat + rota /api/chat, que chama o nosso agente (src/pipeli
 A chave do Gemini fica SÓ aqui no servidor (variável de ambiente GEMINI_API_KEY).
 
 Rodar localmente:  crie o .env com GEMINI_API_KEY=... e rode  python src/servidor.py  -> http://localhost:5000
-Em produção (Render):  gunicorn src.servidor:app --workers 1 --threads 4 --timeout 120
+Em produção (Render):  gunicorn src.servidor:app --bind 0.0.0.0:10000 --workers 1 --threads 4 --timeout 120
 """
 import logging
 import os
