@@ -15,7 +15,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # importa o pa
 
 import pandas as pd
 
-from src.dados_modelo import ALVO, CATEGORICAS, DF, METRICAS, MODELO, NUMERICAS, conferir_transformacao, para_o_modelo
+from src.dados_modelo import (ALVO, CATEGORICAS, CLASSE_POSITIVA, DF, LIMIAR, METRICAS, MODELO, NUMERICAS,
+                              conferir_transformacao, para_o_modelo)
 
 pd.set_option("display.width", 200, "display.max_columns", None)
 CLASSIF = hasattr(MODELO, "classes_")          # classificador do sklearn (Pipeline incluso) tem classes_
@@ -42,12 +43,15 @@ elif DF[ALVO].nunique() == 2:
 
 entradas = pd.read_csv(sys.argv[1]) if len(sys.argv) > 1 else DF.drop(columns=ALVO).head(3)
 entradas = entradas[NUMERICAS + CATEGORICAS]
+print(f"\n== Limiar de decisão: {LIMIAR:.3f} (previsao = sim quando prob_sim >= limiar)")
 print("\n== Previsões do modelo")
 saida = entradas.copy()
-X_modelo = pd.concat([para_o_modelo(e) for e in entradas.to_dict("records")], ignore_index=True)   # PONTE
 saida["previsao"] = MODELO.predict(X_modelo)
 if hasattr(MODELO, "predict_proba"):
     probs = MODELO.predict_proba(X_modelo)
     for i, c in enumerate(MODELO.classes_):
         saida[f"prob_{c}"] = probs[:, i].round(3)
+    if CLASSIF and CLASSE_POSITIVA in MODELO.classes_:     # decide pelo limiar escolhido no treino
+        p_pos = probs[:, list(MODELO.classes_).index(CLASSE_POSITIVA)]
+        saida["previsao"] = [CLASSE_POSITIVA if p >= LIMIAR else "nao" for p in p_pos]
 print(saida.to_string())

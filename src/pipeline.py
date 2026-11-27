@@ -236,7 +236,7 @@ def responder(mensagem: str, historico: list[dict]) -> dict:
     conversa = _conversa(historico, pedido)
     resposta = _gemini(INSTRUCOES, conversa)                                  # 4
 
-    # números "confiáveis": a mensagem atual, as nossas instruções (ex.: "2017 e 2018", limiar de 50%)
+    # números "confiáveis": a mensagem atual, as nossas instruções (ex.: "2017 e 2018", limiar de decisão)
     # e as respostas anteriores do agente que passaram na verificação
     textos = [mensagem, INSTRUCOES] + [str(h.get("texto", "")) for h in historico[-MAX_HISTORICO:]
                            if h.get("papel") == "model" and "⚠️" not in str(h.get("texto", ""))]
