@@ -45,7 +45,7 @@ agente-reservas-hotel/
 ├── prompts/            instruções das etapas 1 (interpretar.md) e 4 (responder.md)
 ├── knowledge_base/     base de conhecimento do RAG: análise do trabalho anterior
 ├── data/               dataset original do Kaggle e dataset limpo e legível
-├── models/             modelo.joblib, metricas.json, amostra_conferencia.json
+├── models/             modelo.joblib, metricas.json, amostra_conferencia.json, resultados_gridsearch.csv, metricas_teste.csv
 ├── static/             página de chat (index.html)
 └── streamlit_app/      versão alternativa da interface em Streamlit (não publicada)
 ```
@@ -54,6 +54,8 @@ agente-reservas-hotel/
 
 - Classificação binária: `cancelada` = `sim` / `nao` (classe positiva: `sim`).
 - 8 atributos (o enunciado permite até 8): `antecedencia_dias`, `preco_medio_diaria`, `pedidos_especiais`, `mes_chegada`, `noites_fim_de_semana`, `noites_semana`, `segmento_mercado`, `vaga_estacionamento`. Na validação cruzada, o MLP com esses 8 teve F1 0,7020 contra 0,7028 com os 17 originais.
+- Hiperparâmetros por GridSearchCV estratificado de 5 dobras (21 combinações: 3 arquiteturas × 7 valores de alpha, de 0,001 a 3,0); melhor: alpha 0,1 com camadas ocultas (100, 50).
+- Limiar de decisão escolhido por validação cruzada nos dados de treino (`TunedThresholdClassifierCV`, maximizando o F1): 35,4% em vez dos 50% padrão. A previsão usa esse limiar, e as métricas de teste em `models/metricas.json` já o consideram.
 - Métricas de teste reais em `models/metricas.json` (acurácia, F1, precisão, recall, especificidade, AUC).
 
 ## Como rodar
@@ -78,14 +80,17 @@ Deploy no Render: build `pip install -r requirements.txt`, start `gunicorn src.s
 
 ## O que mudamos em relação ao kit
 
-1. **Domínio e modelo próprios:** dataset Hotel Reservations com a mesma limpeza do trabalho anterior; colunas e categorias traduzidas para o português no dataset legível; modelo retreinado com 8 atributos escolhidos por validação cruzada; grade do MLP ampliada (alpha até 0,1), como sugerido nas melhorias do trabalho anterior. O F1 de teste subiu de 0,693 para 0,715.
+1. **Domínio e modelo próprios:** dataset Hotel Reservations com a mesma limpeza do trabalho anterior; colunas e categorias traduzidas para o português no dataset legível; modelo retreinado com 8 atributos escolhidos por validação cruzada; grade do MLP ampliada (alpha de 0,001 até 3,0; o melhor continuou sendo 0,1), como sugerido nas melhorias do trabalho anterior e no feedback do professor. O F1 de teste subiu de 0,693 para 0,715 (limiar de 50%) e para 0,723 com o limiar escolhido por validação cruzada.
 2. **Consultas com filtros:** a etapa 1 devolve também `filtros` (`coluna`, `operador`, `valor`), e `estatisticas()` aplica as condições antes de calcular. Ex.: "quantas reservas Online com mais de 100 dias de antecedência foram canceladas?". As consultas usam **todas** as colunas do dataset, não só as do modelo, e trazem maior e menor taxa já calculadas (o Gemini não precisa comparar números).
 3. **Entrada em linguagem natural:** "2 semanas" → 14 dias, "3 meses" → 90, "julho" → 7, "duas" → 2, "nenhum", "sem" ou "não" → 0 (só quando não há outro número na frase), "1 milhão" → 1.000.000, "não precisa de vaga" → `nao`, "empresa" → Corporativo.
 4. **Regras de domínio do hotel:** antecedência negativa, mês fora de 1–12, estadia sem noites, diária negativa ou acima de 5.000 € viram **erro**; valores fora da faixa do treino viram **alerta**; diária 0 fora do segmento Cortesia gera alerta.
-5. **Previsão mais explicada:** probabilidade de cancelamento em %, grau de confiança (perto do limiar de 50% = baixa), recall e precisão de teste junto da previsão; casos semelhantes com 15 reservas reais do mesmo segmento (e mesma vaga), percentual cancelado entre elas e taxa geral do dataset para comparação.
-6. **RAG melhor, e medido:** base dividida em 3 arquivos com trechos curtos; mais fatos gerados do CSV (taxa por segmento, plano, quarto, vaga, recorrência, faixa de antecedência, pedidos especiais, mês com nome, erros do modelo, comparação com o palpite ingênuo); busca combinando TF-IDF de palavras e de pedaços de letras, com expansão por sinônimos do domínio. Com `tests/avaliacao_rag.py` (20 perguntas de teste), o acerto nos 5 primeiros trechos subiu de 70% (busca do kit) para 95%, e as 3 perguntas fora do escopo não trazem nenhum trecho.
+5. **Previsão mais explicada:** probabilidade de cancelamento em %, grau de confiança (perto do limiar de decisão = baixa), recall e precisão de teste junto da previsão; casos semelhantes com 15 reservas reais do mesmo segmento (e mesma vaga), percentual cancelado entre elas e taxa geral do dataset para comparação.
+6. **RAG melhor, e medido:** base dividida em 3 arquivos com trechos curtos; mais fatos gerados do CSV (taxa por segmento, plano, quarto, vaga, recorrência, faixa de antecedência, pedidos especiais, mês com nome, erros do modelo, comparação com o palpite ingênuo); busca combinando TF-IDF de palavras e de pedaços de letras, com expansão por sinônimos do domínio. Com `tests/avaliacao_rag.py` (20 perguntas de teste), o acerto nos 5 primeiros trechos subiu de 75% (busca do kit) para 95%, e as 3 perguntas fora do escopo não trazem nenhum trecho.
 7. **Página:** exemplos clicáveis, aviso de "servidor acordando" quando a resposta demora, layout para celular.
 8. **Testes próprios:** `tests/teste_offline.py` cobre casos impossíveis do domínio, linguagem natural e filtros, com `assert`.
 9. **Bateria automatizada:** `tests/bateria.py` roda as 12 categorias da apresentação (no Render ou local), calcula o gabarito com o nosso código e salva um registro datado em `docs/` (o avaliado para o relatório é `docs/registro_testes.md`).
 10. **Verificação mais transparente e mais barata:** quando a resposta é refeita, a linha 🔧 mostra quais números não foram conferidos. Com isso descobrimos que o Gemini fazia contas ("deixa passar 32 de cada 100" = 100 − 68). Passamos a entregar essas contas prontas no contexto (`metricas_explicadas()`) e incluímos o prompt da persona entre os textos confiáveis (ele cita "2017 e 2018"). Na bateria, as respostas refeitas caíram de 5 em 10 respostas geradas para 0 em 12, economizando chamadas da cota.
 11. **"Essa previsão faz sentido?":** a etapa 1 passou a repassar os dados da reserva em qualquer intenção, então o código roda de novo o modelo e os casos semelhantes nessa pergunta (antes ele só repetia os números da resposta anterior).
+12. **Grade de alpha ampliada (feedback):** no trabalho anterior o melhor alpha (0,1) ficava na borda da grade; agora ela vai de 0,001 a 3,0 (21 combinações) e o melhor continuou sendo 0,1, o que confirma que não estava limitado pela grade.
+13. **Tabelas exportadas em CSV (feedback):** `scripts/treinar.py` salva `models/resultados_gridsearch.csv` e `models/metricas_teste.csv` na mesma execução que gera o modelo, e as tabelas do relatório saem desses arquivos, para os números baterem com a execução final.
+14. **Limiar escolhido por validação cruzada (feedback):** o limiar de decisão deixou de ser 50% fixo e passou a ser escolhido com `TunedThresholdClassifierCV` só com os dados de treino (35,4%). O agente (`prever()`), a base de conhecimento e as métricas usam esse limiar; `metricas.json` guarda também o F1 e o recall com 50% para comparação (F1 0,715 e recall 0,681 contra F1 0,723 e recall 0,769). O custo é a precisão cair de 0,753 para 0,682, com mais falsos alarmes (de 332 para 533); em troca, o modelo detecta 1.144 dos 1.487 cancelamentos do teste, contra 1.013 antes.
