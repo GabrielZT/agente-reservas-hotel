@@ -46,6 +46,7 @@ entradas = entradas[NUMERICAS + CATEGORICAS]
 print(f"\n== Limiar de decisão: {LIMIAR:.3f} (previsao = sim quando prob_sim >= limiar)")
 print("\n== Previsões do modelo")
 saida = entradas.copy()
+X_modelo = pd.concat([para_o_modelo(e) for e in entradas.to_dict("records")], ignore_index=True)   # PONTE
 saida["previsao"] = MODELO.predict(X_modelo)
 if hasattr(MODELO, "predict_proba"):
     probs = MODELO.predict_proba(X_modelo)

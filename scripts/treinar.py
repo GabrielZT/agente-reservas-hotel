@@ -34,7 +34,6 @@ import pandas as pd
 import sklearn
 from sklearn.base import clone
 from sklearn.compose import ColumnTransformer
-from sklearn.base import clone
 from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score, make_scorer,
                              precision_score, recall_score, roc_auc_score)
 from sklearn.model_selection import (GridSearchCV, StratifiedKFold, TunedThresholdClassifierCV,
@@ -133,11 +132,26 @@ proba_sim = melhor.predict_proba(X_te)[:, list(melhor.classes_).index("sim")]
 ajuste_limiar = TunedThresholdClassifierCV(clone(melhor), scoring=make_scorer(f1_score, pos_label="sim"),
                                            cv=cv, refit=True, n_jobs=-1)
 ajuste_limiar.fit(X_tr, y_tr)
-limiar = float(ajuste_limiar.best_threshold_)
+# arredondado ANTES de calcular as métricas: o app e o conferir.py aplicam exatamente este valor (metricas.json)
+limiar = round(float(ajuste_limiar.best_threshold_), 3)
 prev_padrao = prev                                  # previsões com o limiar 0,5 (antes)
 prev = np.where(proba_sim >= limiar, "sim", "nao")  # previsões de teste com o limiar escolhido
 print(f"Limiar escolhido por validação cruzada: {limiar:.3f}")
 
+
+
+def _metricas_teste(previsoes) -> dict:
+    """Métricas do conjunto de teste para um conjunto de previsões (usado para os dois limiares)."""
+    vn_, fp_, fn_, vp_ = confusion_matrix(y_te, previsoes, labels=["nao", "sim"]).ravel()
+    return {"acuracia": round(float(accuracy_score(y_te, previsoes)), 3),
+            "f1": round(float(f1_score(y_te, previsoes, pos_label="sim")), 3),
+            "precisao": round(float(precision_score(y_te, previsoes, pos_label="sim")), 3),
+            "recall": round(float(recall_score(y_te, previsoes, pos_label="sim")), 3),
+            "especificidade": round(float(vn_ / (vn_ + fp_)), 3),
+            "cancelamentos_detectados": int(vp_), "cancelamentos_perdidos": int(fn_), "falsos_alarmes": int(fp_)}
+
+
+m_limiar, m_padrao = _metricas_teste(prev), _metricas_teste(prev_padrao)
 vn, fp, fn, vp = confusion_matrix(y_te, prev, labels=["nao", "sim"]).ravel()
 parametros = {k.replace("clf__", ""): (list(v) if isinstance(v, tuple) else v) for k, v in grid.best_params_.items()}
 metricas = {
@@ -151,8 +165,9 @@ metricas = {
     "f1_validacao_cruzada": round(float(grid.best_score_), 3),
     "limiar_de_decisao": round(limiar, 3),
     "f1_validacao_cruzada_limiar": round(float(ajuste_limiar.best_score_), 3),
-    "f1_teste_limiar_0_5": round(float(f1_score(y_te, prev_padrao, pos_label="sim")), 3),
-    "recall_teste_limiar_0_5": round(float(recall_score(y_te, prev_padrao, pos_label="sim")), 3),
+    # as mesmas métricas com o limiar padrão de 50%, para comparação (README e relatório)
+    **{f"{k}_teste_limiar_0_5" if k in ("acuracia", "f1", "precisao", "recall", "especificidade")
+       else f"{k}_no_teste_limiar_0_5": v for k, v in m_padrao.items()},
     "acuracia_de_quem_sempre_diz_nao": round(float((y_te == "nao").mean()), 3),
     "reservas_teste": int(len(y_te)),
     "canceladas_no_teste": int((y_te == "sim").sum()),
@@ -177,7 +192,9 @@ colunas = ["param_clf__hidden_layer_sizes", "param_clf__alpha", "mean_test_f1", 
            "mean_test_auc", "std_test_auc", "rank_test_f1"]
 res[colunas].sort_values("rank_test_f1").to_csv("models/resultados_gridsearch.csv",
                                                 index=False, encoding="utf-8-sig")
-pd.Series(metricas).to_frame("valor").to_csv("models/metricas_teste.csv", encoding="utf-8-sig")
+tabela_teste = pd.DataFrame({"limiar_0_5": m_padrao, f"limiar_escolhido_{limiar}": m_limiar})
+tabela_teste.index.name = "metrica_no_teste"
+tabela_teste.to_csv("models/metricas_teste.csv", encoding="utf-8-sig")
 
 print(json.dumps(metricas, ensure_ascii=False, indent=1))
 print("Classes:", leg[ALVO].value_counts().to_dict(), "| linhas:", len(leg), "| numpy", np.__version__)

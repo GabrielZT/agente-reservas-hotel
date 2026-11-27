@@ -27,6 +27,7 @@ BASE = Path(__file__).resolve().parent.parent           # raiz do projeto (este 
 MODELO = joblib.load(BASE / "models" / "modelo.joblib")
 METRICAS = json.loads((BASE / "models" / "metricas.json").read_text(encoding="utf-8"))
 LIMIAR = float(METRICAS.get("limiar_de_decisao", 0.5))   # limiar escolhido por validação cruzada no treino
+LIMIAR_TEXTO = f"{100 * LIMIAR:.1f}%".replace(".", ",")  # "35,4%" (mesmo formato do resto do projeto)
 DF = pd.read_csv(BASE / "data" / "dataset_legivel.csv")
 
 TAREFA = "classificacao"
@@ -281,7 +282,7 @@ def prever(entrada: dict) -> dict:
         "probabilidade_cancelamento_percentual": round(100 * p_canc, 1),
         "probabilidade_nao_cancelamento_percentual": round(100 * (1 - p_canc), 1),
         "limiar_de_decisao_percentual": round(100 * LIMIAR, 1),
-        "confianca": (f"baixa: probabilidade perto do limiar de {100 * LIMIAR:.0f}%" if margem < 0.3
+        "confianca": (f"baixa: probabilidade perto do limiar de {LIMIAR_TEXTO}" if margem < 0.3
                     else "moderada" if margem < 0.7 else "alta"),
         "acuracia_teste": float(METRICAS["acuracia_teste"]),
         "f1_teste": float(METRICAS["f1_teste"]),
@@ -428,7 +429,7 @@ def fatos_do_dataset() -> list[str]:
         f"{m['cancelamentos_detectados_no_teste']} e perdeu {m['cancelamentos_perdidos_no_teste']}; "
         f"deu {m['falsos_alarmes_no_teste']} falsos alarmes (previu cancelamento em reservas que foram mantidas).",
         f"Limiar de decisão: o modelo prevê cancelamento quando a probabilidade de cancelamento é de "
-        f"{100 * LIMIAR:.1f}% ou mais. O limiar foi escolhido por validação cruzada nos dados de treino "
+        f"{LIMIAR_TEXTO} ou mais. O limiar foi escolhido por validação cruzada nos dados de treino "
         f"(maximizando o F1), em vez do 50% padrão. Com 50% o F1 de teste seria {m.get('f1_teste_limiar_0_5')} "
         f"e o recall {m.get('recall_teste_limiar_0_5')}; com o limiar escolhido, F1 {m['f1_teste']} e recall {m['recall_teste']}.",
         f"Comparação com um palpite ingênuo: quem dissesse sempre 'não cancela' acertaria {m['acuracia_de_quem_sempre_diz_nao']} "
@@ -436,6 +437,13 @@ def fatos_do_dataset() -> list[str]:
         f"Período dos dados: chegadas de {int(DF['ano_chegada'].min())} e {int(DF['ano_chegada'].max())} "
         f"({int((DF['ano_chegada'] == 2017).sum())} reservas em 2017 e {int((DF['ano_chegada'] == 2018).sum())} em 2018).",
     ]
+    if "precisao_teste_limiar_0_5" in m:                  # gerado pelo scripts/treinar.py atual
+        fatos.append(
+            f"O que mudou com o limiar de decisão: com 50%, o modelo detectava {m['cancelamentos_detectados_no_teste_limiar_0_5']} "
+            f"dos {m['canceladas_no_teste']} cancelamentos do teste, com precisão {m['precisao_teste_limiar_0_5']} e "
+            f"{m['falsos_alarmes_no_teste_limiar_0_5']} falsos alarmes; com {LIMIAR_TEXTO}, detecta "
+            f"{m['cancelamentos_detectados_no_teste']}, com precisão {m['precisao_teste']} e {m['falsos_alarmes_no_teste']} "
+            f"falsos alarmes. Ou seja, percebe mais cancelamentos em troca de mais alarmes falsos.")
     for col, nome in [("antecedencia_dias", "antecedência (dias)"), ("preco_medio_diaria", "preço médio da diária (euros)"),
                       ("pedidos_especiais", "pedidos especiais"), ("total_noites", "total de noites")]:
         s = DF[col]
