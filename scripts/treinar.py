@@ -192,7 +192,8 @@ colunas = ["param_clf__hidden_layer_sizes", "param_clf__alpha", "mean_test_f1", 
            "mean_test_auc", "std_test_auc", "rank_test_f1"]
 res[colunas].sort_values("rank_test_f1").to_csv("models/resultados_gridsearch.csv",
                                                 index=False, encoding="utf-8-sig")
-tabela_teste = pd.DataFrame({"limiar_0_5": m_padrao, f"limiar_escolhido_{limiar}": m_limiar})
+tabela_teste = pd.DataFrame({"limiar_0_5": pd.Series(m_padrao, dtype=object),             # dtype=object: contagens
+                             f"limiar_escolhido_{limiar}": pd.Series(m_limiar, dtype=object)})  # saem sem ".0"
 tabela_teste.index.name = "metrica_no_teste"
 tabela_teste.to_csv("models/metricas_teste.csv", encoding="utf-8-sig")
 

@@ -1,21 +1,9 @@
-﻿,valor
-modelo,"MLPClassifier (rede neural) {'alpha': 0.1, 'hidden_layer_sizes': [100, 50]}"
-acuracia_teste,0.831
-f1_teste,0.723
-precisao_teste,0.682
-recall_teste,0.769
-especificidade_teste,0.856
-auc_teste,0.903
-f1_validacao_cruzada,0.71
-limiar_de_decisao,0.354
-f1_validacao_cruzada_limiar,0.719
-f1_teste_limiar_0_5,0.715
-recall_teste_limiar_0_5,0.681
-acuracia_de_quem_sempre_diz_nao,0.713
-reservas_teste,5178
-canceladas_no_teste,1487
-cancelamentos_detectados_no_teste,1144
-cancelamentos_perdidos_no_teste,343
-falsos_alarmes_no_teste,533
-atributos_do_modelo,"['antecedencia_dias', 'preco_medio_diaria', 'pedidos_especiais', 'mes_chegada', 'noites_fim_de_semana', 'noites_semana', 'segmento_mercado', 'vaga_estacionamento']"
-sklearn_version,1.9.1
+﻿metrica_no_teste,limiar_0_5,limiar_escolhido_0.354
+acuracia,0.844,0.831
+f1,0.715,0.723
+precisao,0.753,0.683
+recall,0.681,0.769
+especificidade,0.91,0.856
+cancelamentos_detectados,1013.0,1144.0
+cancelamentos_perdidos,474.0,343.0
+falsos_alarmes,332.0,532.0
