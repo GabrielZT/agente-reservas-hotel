@@ -274,15 +274,15 @@ def prever(entrada: dict) -> dict:
     probs = {str(_nativo(c)): float(p) for c, p in zip(MODELO.classes_, MODELO.predict_proba(X)[0])}
     p_canc = probs[CLASSE_POSITIVA]
     classe = CLASSE_POSITIVA if p_canc >= LIMIAR else "nao"
-    distancia = abs(p_canc - LIMIAR)
+    margem = (p_canc - LIMIAR) / (1 - LIMIAR) if p_canc >= LIMIAR else (LIMIAR - p_canc) / LIMIAR
     return {
         "previsao": classe,
         "previsao_por_extenso": "a reserva SERÁ cancelada" if classe == CLASSE_POSITIVA else "a reserva NÃO será cancelada",
         "probabilidade_cancelamento_percentual": round(100 * p_canc, 1),
         "probabilidade_nao_cancelamento_percentual": round(100 * (1 - p_canc), 1),
         "limiar_de_decisao_percentual": round(100 * LIMIAR, 1),
-        "confianca": (f"baixa: probabilidade perto do limiar de {100 * LIMIAR:.0f}%" if distancia < 0.15
-                      else "moderada" if distancia < 0.35 else "alta"),
+        "confianca": (f"baixa: probabilidade perto do limiar de {100 * LIMIAR:.0f}%" if margem < 0.3
+                    else "moderada" if margem < 0.7 else "alta"),
         "acuracia_teste": float(METRICAS["acuracia_teste"]),
         "f1_teste": float(METRICAS["f1_teste"]),
         "recall_teste": float(METRICAS["recall_teste"]),
@@ -420,16 +420,17 @@ def fatos_do_dataset() -> list[str]:
         f"Tamanho do dataset: depois da limpeza, o dataset tem {len(DF)} reservas e {DF.shape[1]} colunas. "
         f"Foram canceladas {int(canc.sum())} reservas ({_pct(canc.mean())}) e não canceladas {int((~canc).sum())} ({_pct(1 - canc.mean())}).",
         f"Taxa geral de cancelamento: {_pct(canc.mean())} das reservas foram canceladas.",
-        f"Desempenho do modelo no conjunto de teste ({m['reservas_teste']} reservas): acurácia {m['acuracia_teste']}, "
-        f"F1 {m['f1_teste']}, precisão {m['precisao_teste']}, recall (sensibilidade) {m['recall_teste']}, "
-        f"especificidade {m['especificidade_teste']}, AUC {m['auc_teste']}. Modelo: {m['modelo']}.",
+        f"Desempenho do modelo no conjunto de teste ({m['reservas_teste']} reservas, com o limiar de decisão escolhido): "
+        f"acurácia {m['acuracia_teste']}, F1 {m['f1_teste']}, precisão {m['precisao_teste']}, "
+        f"recall (sensibilidade) {m['recall_teste']}, especificidade {m['especificidade_teste']}, "
+        f"AUC {m['auc_teste']}. Modelo: {m['modelo']}.",
         f"Erros do modelo no teste: das {m['canceladas_no_teste']} reservas canceladas, o modelo detectou "
+        f"{m['cancelamentos_detectados_no_teste']} e perdeu {m['cancelamentos_perdidos_no_teste']}; "
+        f"deu {m['falsos_alarmes_no_teste']} falsos alarmes (previu cancelamento em reservas que foram mantidas).",
         f"Limiar de decisão: o modelo prevê cancelamento quando a probabilidade de cancelamento é de "
         f"{100 * LIMIAR:.1f}% ou mais. O limiar foi escolhido por validação cruzada nos dados de treino "
         f"(maximizando o F1), em vez do 50% padrão. Com 50% o F1 de teste seria {m.get('f1_teste_limiar_0_5')} "
         f"e o recall {m.get('recall_teste_limiar_0_5')}; com o limiar escolhido, F1 {m['f1_teste']} e recall {m['recall_teste']}.",
-        f"{m['cancelamentos_detectados_no_teste']} e perdeu {m['cancelamentos_perdidos_no_teste']}; "
-        f"deu {m['falsos_alarmes_no_teste']} falsos alarmes (previu cancelamento em reservas que foram mantidas).",
         f"Comparação com um palpite ingênuo: quem dissesse sempre 'não cancela' acertaria {m['acuracia_de_quem_sempre_diz_nao']} "
         f"das reservas do teste; o modelo acerta {m['acuracia_teste']}. Por isso a acurácia sozinha engana e o F1 é a métrica principal.",
         f"Período dos dados: chegadas de {int(DF['ano_chegada'].min())} e {int(DF['ano_chegada'].max())} "
