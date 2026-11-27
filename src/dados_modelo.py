@@ -26,6 +26,7 @@ log = logging.getLogger(__name__)
 BASE = Path(__file__).resolve().parent.parent           # raiz do projeto (este arquivo está em src/)
 MODELO = joblib.load(BASE / "models" / "modelo.joblib")
 METRICAS = json.loads((BASE / "models" / "metricas.json").read_text(encoding="utf-8"))
+LIMIAR = float(METRICAS.get("limiar_de_decisao", 0.5))   # limiar escolhido por validação cruzada no treino
 DF = pd.read_csv(BASE / "data" / "dataset_legivel.csv")
 
 TAREFA = "classificacao"
@@ -270,17 +271,18 @@ def metricas_explicadas() -> dict:
 def prever(entrada: dict) -> dict:
     """Roda o modelo treinado com uma entrada já preparada (use preparar() antes)."""
     X = para_o_modelo(entrada)                          # ponte: legível -> formato do modelo
-    classe = str(_nativo(MODELO.predict(X)[0]))
     probs = {str(_nativo(c)): float(p) for c, p in zip(MODELO.classes_, MODELO.predict_proba(X)[0])}
     p_canc = probs[CLASSE_POSITIVA]
+    classe = CLASSE_POSITIVA if p_canc >= LIMIAR else "nao"
+    distancia = abs(p_canc - LIMIAR)
     return {
         "previsao": classe,
         "previsao_por_extenso": "a reserva SERÁ cancelada" if classe == CLASSE_POSITIVA else "a reserva NÃO será cancelada",
         "probabilidade_cancelamento_percentual": round(100 * p_canc, 1),
         "probabilidade_nao_cancelamento_percentual": round(100 * (1 - p_canc), 1),
-        "limiar_de_decisao_percentual": 50,
-        "confianca": ("baixa: probabilidade perto do limiar de 50%" if abs(p_canc - 0.5) < 0.15
-                      else "moderada" if abs(p_canc - 0.5) < 0.35 else "alta"),
+        "limiar_de_decisao_percentual": round(100 * LIMIAR, 1),
+        "confianca": (f"baixa: probabilidade perto do limiar de {100 * LIMIAR:.0f}%" if distancia < 0.15
+                      else "moderada" if distancia < 0.35 else "alta"),
         "acuracia_teste": float(METRICAS["acuracia_teste"]),
         "f1_teste": float(METRICAS["f1_teste"]),
         "recall_teste": float(METRICAS["recall_teste"]),
@@ -422,6 +424,10 @@ def fatos_do_dataset() -> list[str]:
         f"F1 {m['f1_teste']}, precisão {m['precisao_teste']}, recall (sensibilidade) {m['recall_teste']}, "
         f"especificidade {m['especificidade_teste']}, AUC {m['auc_teste']}. Modelo: {m['modelo']}.",
         f"Erros do modelo no teste: das {m['canceladas_no_teste']} reservas canceladas, o modelo detectou "
+        f"Limiar de decisão: o modelo prevê cancelamento quando a probabilidade de cancelamento é de "
+        f"{100 * LIMIAR:.1f}% ou mais. O limiar foi escolhido por validação cruzada nos dados de treino "
+        f"(maximizando o F1), em vez do 50% padrão. Com 50% o F1 de teste seria {m.get('f1_teste_limiar_0_5')} "
+        f"e o recall {m.get('recall_teste_limiar_0_5')}; com o limiar escolhido, F1 {m['f1_teste']} e recall {m['recall_teste']}.",
         f"{m['cancelamentos_detectados_no_teste']} e perdeu {m['cancelamentos_perdidos_no_teste']}; "
         f"deu {m['falsos_alarmes_no_teste']} falsos alarmes (previu cancelamento em reservas que foram mantidas).",
         f"Comparação com um palpite ingênuo: quem dissesse sempre 'não cancela' acertaria {m['acuracia_de_quem_sempre_diz_nao']} "
